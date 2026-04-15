@@ -117,10 +117,21 @@ const postSignin = (req, res) => {
 
             res.redirect("/user/dashboard");
 
+                    })
 
+                         res.redirect("/user/dashboard");
 
-            
-        })
+            // Success
+            return res.json({
+                message: "Login Successful",
+                user: {
+                    id: foundCustomers._id,
+                    email: foundCustomers.email,
+                    firstName: foundCustomers.firstName,
+                    lastName: foundCustomers.lastName
+                }
+            })
+
         .catch((err) => {
             console.error("Error during signin:", err);
             res.status(500).send("Internal server error");
