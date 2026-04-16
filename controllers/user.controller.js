@@ -94,8 +94,8 @@ const postSignin = (req, res) => {
         .then((foundCustomers) => {
             if (!foundCustomers) {
                 console.log("Invalid email");
-                return res.status(400).json({message: "Invalid email or password"})
-            } 
+                return res.status(400).json({ message: "Invalid email or password" })
+            }
             // if (foundCustomers.password !== password) {
             //     console.log("Invalid Password");
             //     return res.status(400).json({ message: "Invalid email or password"});
@@ -105,28 +105,49 @@ const postSignin = (req, res) => {
             // Compare provided password with hashed one
             const isMatch = bcrypt.compareSync(password, foundCustomers.password);
 
-            if(!isMatch) {
+            if (!isMatch) {
                 console.log("Invalid Password");
-                return res.status(400).json({ message: "Invalid email or password"});
+                return res.status(400).json({ message: "Invalid email or password" });
             }
 
 
+
+            // res.redirect("/user/dashboard");
+
             // Success
-            console.log("Login Successful for", foundCustomers.email);
+            return res.json({
+                message: "Login Successful",
+                user: {
+                    id: foundCustomers._id,
+                    email: foundCustomers.email,
+                    firstName: foundCustomers.firstName,
+                    lastName: foundCustomers.lastName
+                }
+            })
 
 
-            res.redirect("/user/dashboard");
 
-                    })
-
-
-
+        })
         .catch((err) => {
             console.error("Error during signin:", err);
             res.status(500).send("Internal server error");
         });
 }
 
-
-
-module.exports = { postSignup, getSignup, postSignin, getSignin, getDashboard }
+const getAllUsers = (req, res) => {
+    Customer.find()
+        .then((allUsers) => {
+            console.log("All users:", allUsers);
+            res.status(200).json(
+                {
+                    message: "Registered Users",
+                    users: allUsers
+                }
+            );
+        })
+        .catch((err) => {
+            console.error("Error fetching users:", err);
+            res.status(500).send("Internal server error");
+        });
+};
+module.exports = { postSignup, getSignup, postSignin, getSignin, getDashboard, getAllUsers }
