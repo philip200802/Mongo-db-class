@@ -1,31 +1,31 @@
-
-const Customer = require("../Models/user.model");
+const Customer = require("../models/user.model");
 const ejs = require('ejs')
 const bcrypt = require('bcryptjs')
 const nodemailer = require('nodemailer');
+const dotenv = require('dotenv');
+dotenv.config();
+const jwt = require('jsonwebtoken');
+
+const JWT_Secret = process.env.jwtSecret;
 
 
 const getSignup = (req, res) => {
     res.render("signup");
 }
 
-const getSignin = (req, res) => {   
+const getSignin = (req, res) => {
     res.render("signin");
-}
-
-const getDashboard = (req, res) => {
-    res.render("dashboard");
 }
 
 const postSignup = (req, res) => {
     let salt = bcrypt.genSaltSync(10);
     let hashedPassword = bcrypt.hashSync(req.body.password, salt);
-    
+
     // Overwrite the plain password with the hashed one
     req.body.password = hashedPassword;
 
     const user = req.body;
-    
+
     const newCustomer = new Customer(user);
 
     newCustomer.save()
@@ -37,22 +37,21 @@ const postSignup = (req, res) => {
             let transporter = nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
-                    user: 'adegboyegaphilip6@gmail.com',
+                    user: 'adedayodaniel1711@gmail.com',
                     // a special password generated from google settings not your original password
                     // Step one: Enable 2-step verification
                     // Step two: Generate app password
-                    pass: 'zzot ueha mkkz fpsy',
-
+                    pass: 'mawl exta bquu strt'
                 }
             });
 
             // This is the information about the email you are sending
             let mailOptions = {
-                from: 'adegboyegaphilip6@gmail.com',
-                to: [user.email, "adegboyegaphilip401@gmail.com"],
+                from: 'adedayodaniel1711@gmail.com',
+                to: [user.email],
                 subject: 'Welcome to our Application',
-                html: 
-                `
+                html:
+                    `
                         <div style="background-color: #f4f4f4; padding: 0 0 10px; border-radius: 30px 30px 0 0  ;">
                             <div style="padding-top: 20px; height: 100px; border-radius: 30px 30px 0 0 ; background: linear-gradient(-45deg, #f89b29 0%, #ff0f7b 100% );">
                                 <h1 style="color:white; text-align: center;">Welcome to our Application</h1>
@@ -63,20 +62,20 @@ const postSignup = (req, res) => {
                                 <div style="padding: 20px 0;">
                                     <hr style="width: 50%;">
                                     <p style="margin-bottom: 10px;">Best Regards</p>
-                                    <p style="color: #f89b29; margin-top: 0;">Code Crafters</p>
+                                    <p style="color: #f89b29; margin-top: 0;">Dan Star</p>
                                 </div>
                             </div>
                         </div>
                 `
-                
+
             };
             // This is what will actually send the email
-            transporter.sendMail(mailOptions, function(error, info){
-            if (error) {
-                console.log(error);
-            } else {
-                console.log('Email sent: ' + info.response);
-            }
+            transporter.sendMail(mailOptions, function (error, info) {
+                if (error) {
+                    console.log(error);
+                } else {
+                    console.log('Email sent: ' + info.response);
+                }
             });
 
             res.redirect("/user/signin");
@@ -105,6 +104,7 @@ const postSignin = (req, res) => {
             // Compare provided password with hashed one
             const isMatch = bcrypt.compareSync(password, foundCustomers.password);
 
+
             if (!isMatch) {
                 console.log("Invalid Password");
                 return res.status(400).json({ message: "Invalid email or password" });
@@ -113,15 +113,16 @@ const postSignin = (req, res) => {
 
 
             // res.redirect("/user/dashboard");
+            const token = jwt.sign({ email: req.body.email }, JWT_Secret, { expiresIn: '1h' });
+            console.log("Generated Token:", token);
 
-            // Success
             return res.json({
                 message: "Login Successful",
                 user: {
                     id: foundCustomers._id,
                     email: foundCustomers.email,
                     firstName: foundCustomers.firstName,
-                    lastName: foundCustomers.lastName
+                    token: token
                 }
             })
 
@@ -133,6 +134,33 @@ const postSignin = (req, res) => {
             res.status(500).send("Internal server error");
         });
 }
+
+const getDashboard = (req, res) => {
+    let token = req.headers.authorization.split(" ")[1]; // Assuming token is sent as "Bearer <token>"
+    
+    jwt.verify(token, JWT_Secret, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ message: "Invalid or expired token" });
+        } else {
+            console.log("Decoded token data:", decoded);
+            let userEmail = decoded.email;
+            
+            Customer.findOne({ email: userEmail })
+                .then((user) => {
+                    if (!user) {
+                        return res.status(404).json({ message: "User not found" });
+                    }
+                    console.log("User found:", user);
+                    res.json({ message: "Dashboard accessed successfully", user: { email: user.email, firstName: user.firstName } });
+                })
+                .catch((err) => {
+                    console.error("Error fetching user:", err);
+                    res.status(500).json({ message: "Internal server error" });
+                });
+        }
+    });
+}
+
 
 const getAllUsers = (req, res) => {
     Customer.find()
@@ -150,4 +178,7 @@ const getAllUsers = (req, res) => {
             res.status(500).send("Internal server error");
         });
 };
+
+
+
 module.exports = { postSignup, getSignup, postSignin, getSignin, getDashboard, getAllUsers }
